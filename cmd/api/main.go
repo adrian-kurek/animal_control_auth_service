@@ -19,6 +19,16 @@ func connectToDB() (*config.DB, error) {
 	return db, nil
 }
 
+func connectToCache() (*config.CacheService, error) {
+	cacheConnectionLink := os.Getenv("CACHE_LINK")
+
+	cacheService, err := config.NewCacheService(cacheConnectionLink)
+	if err != nil {
+		return &config.CacheService{}, err
+	}
+	return cacheService, nil
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -29,4 +39,10 @@ func main() {
 		log.Fatal(err.Error())
 	}
 	defer db.Close()
+
+	cacheService, err := connectToCache()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	defer cacheService.Close()
 }
