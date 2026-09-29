@@ -1,9 +1,9 @@
 package main
 
 import (
-	"log"
 	"os"
 
+	"github.com/adrian-kurek/animal_control_auth_service/common/logger"
 	"github.com/adrian-kurek/animal_control_auth_service/config"
 	"github.com/joho/godotenv"
 )
@@ -30,19 +30,25 @@ func connectToCache() (*config.CacheService, error) {
 }
 
 func main() {
+	logger := logger.Setup()
+
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		logger.Error("Failed to load environment variables", "err:", err.Error())
+		panic(err)
 	}
 	db, err := connectToDB()
 	if err != nil {
-		log.Fatal(err.Error())
+		logger.Error("Failed to connecto to databse service", "err:", err.Error())
+		panic(err)
 	}
 	defer db.Close()
 
 	cacheService, err := connectToCache()
 	if err != nil {
-		log.Fatal(err.Error())
+		logger.Error("Failed to connecto to cache service", "err:", err.Error())
+		panic(err)
 	}
 	defer cacheService.Close()
+	logger.Info("Applicattion started")
 }
