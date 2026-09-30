@@ -1,4 +1,4 @@
-// Package errors holds whole logic of APIs
+// Package commonerrors holds whole logic of APIs
 package commonerrors
 
 import (
@@ -19,6 +19,13 @@ const (
 	CategoryMethodNotAllowed Category = "METHOD_NOT_ALLOWED"
 )
 
+type API struct {
+	Category      Category
+	StatusCode    int
+	Message       string
+	IsOperational bool
+}
+
 func NewAPI(statusCode int, category Category, message string, isOperational bool) *API {
 	return &API{
 		Category:      category,
@@ -26,13 +33,6 @@ func NewAPI(statusCode int, category Category, message string, isOperational boo
 		Message:       message,
 		IsOperational: isOperational,
 	}
-}
-
-type API struct {
-	Category      Category
-	StatusCode    int
-	Message       string
-	IsOperational bool
 }
 
 func (apiE *API) Error() string {

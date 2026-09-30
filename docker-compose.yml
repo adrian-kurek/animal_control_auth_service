@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./postgres:/var/lib/postgresql
+      - ./_postgres:/var/lib/postgresql
   redis:
     image: redis:8.8
     container_name: animal_control_redis 
