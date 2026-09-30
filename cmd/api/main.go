@@ -1,10 +1,18 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
 
 	"github.com/adrian-kurek/animal_control_auth_service/common/logger"
 	"github.com/adrian-kurek/animal_control_auth_service/config"
+	"github.com/adrian-kurek/animal_control_auth_service/internal/auth"
+	"github.com/adrian-kurek/animal_control_auth_service/internal/server"
+	"github.com/adrian-kurek/animal_control_auth_service/internal/user"
 	"github.com/joho/godotenv"
 )
 
@@ -29,6 +37,16 @@ func connectToCache() (*config.CacheService, error) {
 	return cacheService, nil
 }
 
+func bootstrapDependencies(loggerService *slog.Logger, db *config.DB, _ config.CacheService, port string) *server.HTTP {
+	userRepository := user.NewRepository(db.Connection, loggerService)
+
+	authService := auth.NewService(userRepository, loggerService)
+	authHandler := auth.NewHandler(authService, loggerService)
+
+	dependencies := server.NewDependencyConfig(port, *authHandler)
+	return server.NewHTTP(dependencies)
+}
+
 func main() {
 	logger := logger.Setup()
 
@@ -50,5 +68,33 @@ func main() {
 		panic(err)
 	}
 	defer cacheService.Close()
-	logger.Info("Applicattion started")
+	apiCtx, apiCtxCancel := context.WithCancel(context.Background())
+
+	port := os.Getenv("PORT")
+	httpServer := bootstrapDependencies(logger, db, *cacheService, port)
+	go func() {
+		logger.Info("Applicattion started", "port", port)
+		if err = httpServer.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("Failed to start server", "error", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+	defer apiCtxCancel()
+
+	if err = httpServer.Shutdown(apiCtx); err != nil {
+		logger.Error("Server forced to shutdown", "error", err)
+		err = db.Close()
+		if err != nil {
+			panic(err)
+		}
+		err = cacheService.Close()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	logger.Info("server exited")
 }
