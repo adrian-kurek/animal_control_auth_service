@@ -9,6 +9,7 @@ import (
 
 	commonerrors "github.com/adrian-kurek/animal_control_auth_service/common/errors"
 	"github.com/adrian-kurek/animal_control_auth_service/common/request"
+	"github.com/adrian-kurek/animal_control_auth_service/common/response"
 )
 
 type authService interface {
@@ -50,6 +51,8 @@ func (ah *Handler) Register(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return ah.handleTimeout(err, r.URL.Path)
 	}
+
+	response.Send(w, http.StatusOK, map[string]string{})
 
 	return nil
 }

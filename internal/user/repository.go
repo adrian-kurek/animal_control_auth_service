@@ -10,6 +10,13 @@ import (
 	"github.com/adrian-kurek/animal_control_auth_service/internal/auth"
 )
 
+const (
+	errorMsg = "error"
+	queryMsg = "query"
+	argsMsg  = "args"
+	emailMsg = "email"
+)
+
 type Repository struct {
 	db            *sql.DB
 	loggerService *slog.Logger
@@ -27,27 +34,27 @@ func (ur *Repository) Create(ctx context.Context, user auth.NewUser, hashedPassw
 
 	stmt, err := ur.db.PrepareContext(ctx, query)
 	if err != nil {
-		ur.loggerService.Error(commonerrors.FailedToPrepareQuery, "data", map[string]string{
-			"query": query,
-			"error": err.Error(),
+		ur.loggerService.ErrorContext(ctx, commonerrors.FailedToPrepareQuery, "data", map[string]string{
+			queryMsg: query,
+			errorMsg: err.Error(),
 		})
 		return err
 	}
 	defer func() {
 		if closeErr := stmt.Close(); closeErr != nil {
-			ur.loggerService.Error(commonerrors.FailedToCloseStatement, "data", closeErr)
+			ur.loggerService.ErrorContext(ctx, commonerrors.FailedToCloseStatement, "data", closeErr)
 		}
 	}()
 
 	_, err = stmt.ExecContext(ctx, user.Email, user.Username, hashedPassword)
 	if err != nil {
-		ur.loggerService.Error(commonerrors.FailedToExecuteInsertQuery, "data", map[string]any{
-			"query": query,
-			"args": map[string]string{
+		ur.loggerService.ErrorContext(ctx, commonerrors.FailedToExecuteInsertQuery, "data", map[string]any{
+			queryMsg: query,
+			argsMsg: map[string]string{
 				"username": user.Username,
-				"email":    user.Email,
+				emailMsg:   user.Email,
 			},
-			"error": err,
+			errorMsg: err,
 		})
 		return err
 	}
@@ -60,27 +67,27 @@ func (ur *Repository) Update(ctx context.Context, username, email string) error 
 
 	stmt, err := ur.db.PrepareContext(ctx, query)
 	if err != nil {
-		ur.loggerService.Error(commonerrors.FailedToPrepareQuery, "data", map[string]string{
-			"query": query,
-			"error": err.Error(),
+		ur.loggerService.ErrorContext(ctx, commonerrors.FailedToPrepareQuery, "data", map[string]string{
+			queryMsg: query,
+			errorMsg: err.Error(),
 		})
 		return err
 	}
 	defer func() {
 		if closeErr := stmt.Close(); closeErr != nil {
-			ur.loggerService.Error(commonerrors.FailedToCloseStatement, "data", closeErr)
+			ur.loggerService.ErrorContext(ctx, commonerrors.FailedToCloseStatement, "data", closeErr)
 		}
 	}()
 
 	_, err = stmt.ExecContext(ctx, username, email)
 	if err != nil {
-		ur.loggerService.Error(commonerrors.FailedToExecuteInsertQuery, "data", map[string]any{
-			"query": query,
-			"args": map[string]string{
+		ur.loggerService.ErrorContext(ctx, commonerrors.FailedToExecuteInsertQuery, "data", map[string]any{
+			queryMsg: query,
+			argsMsg: map[string]string{
 				"username": username,
-				"email":    email,
+				emailMsg:   email,
 			},
-			"error": err,
+			errorMsg: err,
 		})
 		return err
 	}
@@ -92,15 +99,15 @@ func (ur *Repository) FindByEmail(ctx context.Context, email string) (Model, err
 	query := "SELECT  id, email, username, password, email_verified, created_at, updated_at FROM USERS WHERE email = $1"
 	stmt, err := ur.db.PrepareContext(ctx, query)
 	if err != nil {
-		ur.loggerService.Error(commonerrors.FailedToPrepareQuery, "data", map[string]string{
-			"query": query,
-			"error": err.Error(),
+		ur.loggerService.ErrorContext(ctx, commonerrors.FailedToPrepareQuery, "data", map[string]string{
+			queryMsg: query,
+			errorMsg: err.Error(),
 		})
 		return Model{}, err
 	}
 	defer func() {
 		if closeErr := stmt.Close(); closeErr != nil {
-			ur.loggerService.Error(commonerrors.FailedToCloseStatement, "data", closeErr)
+			ur.loggerService.ErrorContext(ctx, commonerrors.FailedToCloseStatement, "data", closeErr)
 		}
 	}()
 
@@ -116,17 +123,17 @@ func (ur *Repository) FindByEmail(ctx context.Context, email string) (Model, err
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			ur.loggerService.Info("user not found", "data", map[string]any{
-				"email": email,
+			ur.loggerService.InfoContext(ctx, "user not found", "data", map[string]any{
+				emailMsg: email,
 			})
 			return Model{
 				ID: 0,
 			}, nil
 		}
-		ur.loggerService.Error(commonerrors.FailedToExecuteSelectQuery, "data", map[string]any{
-			"query": query,
-			"args":  []any{email},
-			"error": err,
+		ur.loggerService.ErrorContext(ctx, commonerrors.FailedToExecuteSelectQuery, "data", map[string]any{
+			queryMsg: query,
+			argsMsg:  []any{email},
+			errorMsg: err,
 		})
 		return Model{}, err
 	}
